@@ -210,9 +210,13 @@ void onGoHome();
 void onGoToMyLibraryWithPath(const std::string& path);
 void onGoToRecentBooks();
 void onGoToReader(const std::string& initialEpubPath) {
+  // Copy before exitActivity(): the reference usually points into the current
+  // activity's own state (e.g. HomeActivity::recentBooks), which exitActivity
+  // destroys. Passing the dangling reference on is a use-after-free.
+  const std::string path = initialEpubPath;
   exitActivity();
   enterNewActivity(
-      new ReaderActivity(renderer, mappedInputManager, initialEpubPath, onGoHome, onGoToMyLibraryWithPath));
+      new ReaderActivity(renderer, mappedInputManager, path, onGoHome, onGoToMyLibraryWithPath));
 }
 
 void onGoToFileTransfer() {
@@ -236,8 +240,10 @@ void onGoToRecentBooks() {
 }
 
 void onGoToMyLibraryWithPath(const std::string& path) {
+  // Same use-after-free risk as onGoToReader(): copy before the owner dies.
+  const std::string initialPath = path;
   exitActivity();
-  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, path));
+  enterNewActivity(new MyLibraryActivity(renderer, mappedInputManager, onGoHome, onGoToReader, initialPath));
 }
 
 void onGoToBrowser() {
